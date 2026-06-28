@@ -1,0 +1,93 @@
+// ============ 1. 修改后的词卡渲染函数 ============
+function renderCards() {
+    const cardGrid = document.getElementById('cardGrid');
+    const cardEmpty = document.getElementById('cardEmpty');
+    
+    if (!cardGrid) return;
+    
+    cardGrid.innerHTML = '';
+    
+    // 过滤出未掌握或需要复习的词卡（根据你原有的逻辑，这里以展示全部为例）
+    if (cards.length === 0) {
+        if (cardEmpty) cardEmpty.style.display = 'block';
+        return;
+    }
+    
+    if (cardEmpty) cardEmpty.style.display = 'none';
+    
+    // 关键改动：在 forEach 循环中引入 index
+    cards.forEach((c, index) => {
+        const div = document.createElement('div');
+        div.className = 'flash-card';
+        
+        // 关键改动：onclick 绑定的 showCardDefByIndex(${index}) 只传数字，完美避免换行符报错
+        div.innerHTML = `
+            <div class="word">${c.word}</div>
+            <button class="card-speak" onclick="event.stopPropagation(); speakWord('${c.word}')">🔊</button>
+            <div class="card-actions">
+                <button class="card-def-btn" onclick="event.stopPropagation(); showCardDefByIndex(${index})">查看</button>
+                <button class="card-def-btn" style="color:var(--red);" onclick="event.stopPropagation(); deleteCard(${index})">删除</button>
+            </div>
+        `;
+        
+        cardGrid.appendChild(div);
+    });
+}
+
+// ============ 2. 新增/替换：通过索引显示词卡详细解释的函数 ============
+function showCardDefByIndex(index) {
+    const card = cards[index];
+    if (!card) return;
+
+    // 获取弹窗的各个 DOM 元素
+    const popup = document.querySelector('.card-def-popup');
+    const overlay = document.querySelector('.card-def-popup-overlay');
+    
+    // 动态在弹窗内寻找或创建一个专门装载解释文本的容器，防止覆盖关闭按钮
+    let defContainer = document.getElementById('cardDefText');
+    if (!defContainer && popup) {
+        defContainer = document.createElement('div');
+        defContainer.id = 'cardDefText';
+        // 设置样式支持换行符并保持美观
+        defContainer.style.marginTop = '15px';
+        defContainer.style.whiteSpace = 'pre-wrap';
+        defContainer.style.lineHeight = '1.6';
+        defContainer.style.maxHeight = '300px';
+        defContainer.style.overflowY = 'auto';
+        popup.appendChild(defContainer);
+    }
+
+    // 1. 填充标题和发音按钮
+    const popupTitle = popup ? popup.querySelector('.card-def-popup-title') : null;
+    if (popupTitle) {
+        popupTitle.innerHTML = `${card.word} <button class="card-def-popup-speak" onclick="speakWord('${card.word}')">🔊</button>`;
+    }
+    
+    // 2. 填充保存的 AI 释义
+    if (defContainer) {
+        defContainer.textContent = card.definition;
+    }
+
+    // 3. 显示弹窗和遮罩层
+    if (popup) popup.classList.add('visible');
+    if (overlay) overlay.classList.add('visible');
+}
+
+// ============ 3. 辅助函数：关闭弹窗 ============
+function closeCardDefPopup() {
+    const popup = document.querySelector('.card-def-popup');
+    const overlay = document.querySelector('.card-def-popup-overlay');
+    if (popup) popup.classList.remove('visible');
+    if (overlay) overlay.classList.remove('visible');
+}
+
+// ============ 4. 辅助函数：删除词卡（供参考） ============
+function deleteCard(index) {
+    if (confirm('确定要删除这张词卡吗？')) {
+        cards.splice(index, 1);
+        saveCards(); // 执行你原有的保存本地存储逻辑
+        updateCardCount(); // 更新数量徽章
+        renderCards(); // 重新渲染
+        showToast('🗑️ 词卡已删除');
+    }
+}
